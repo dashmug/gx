@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"fmt"
 	"regexp"
+	"unicode/utf8"
 )
 
 // OrderedColumn is a typed accessor over an ordered field (integers, floats,
@@ -120,6 +121,41 @@ func (c StringColumn[T]) MatchRegex(re *regexp.Regexp) Expectation[T] {
 // NotEmpty asserts the string is non-empty (the string-friendly alias of NotZero).
 func (c StringColumn[T]) NotEmpty() Expectation[T] {
 	return newCol(c.name+" not empty", c.name, c.get, func(v string) bool { return v != "" })
+}
+
+// NotMatchRegex asserts the value does not match re.
+func (c StringColumn[T]) NotMatchRegex(re *regexp.Regexp) Expectation[T] {
+	return newCol(
+		fmt.Sprintf("%s does not match /%s/", c.name, re.String()),
+		c.name, c.get,
+		func(v string) bool { return !re.MatchString(v) },
+	)
+}
+
+// Empty asserts the string is empty (complement of NotEmpty).
+func (c StringColumn[T]) Empty() Expectation[T] {
+	return newCol(c.name+" empty", c.name, c.get, func(v string) bool { return v == "" })
+}
+
+// LenBetween asserts lo <= rune count <= hi (inclusive).
+func (c StringColumn[T]) LenBetween(lo, hi int) Expectation[T] {
+	return newCol(
+		fmt.Sprintf("%s length in [%d,%d]", c.name, lo, hi),
+		c.name, c.get,
+		func(v string) bool {
+			l := utf8.RuneCountInString(v)
+			return l >= lo && l <= hi
+		},
+	)
+}
+
+// LenEqual asserts rune count == n.
+func (c StringColumn[T]) LenEqual(n int) Expectation[T] {
+	return newCol(
+		fmt.Sprintf("%s length == %d", c.name, n),
+		c.name, c.get,
+		func(v string) bool { return utf8.RuneCountInString(v) == n },
+	)
 }
 
 // ComparableColumn is a typed accessor over a comparable but not necessarily
