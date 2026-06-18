@@ -13,6 +13,7 @@
 //	}
 //
 // Validation is collect-all: every expectation runs and the Report holds a
-// Result per expectation, including failing row indices for quarantining bad
-// records. For tests, use the gxtest sub-package.
+// Result per expectation, including the complete list of failing row indices for
+// quarantining bad records. Table-level checks use RowCount / RowCountBetween /
+// RowCountEqual; tests use the same suite via the gxtest sub-package.
 package gx

@@ -2,9 +2,10 @@
 
 Type-safe, declarative data quality for Go.
 
-`gx` validates an in-memory slice of structs against a suite of expectations and returns a
-rich pass/fail report — including the exact indices of offending rows, so you can quarantine
-bad records instead of just learning that _something_ failed.
+`gx` validates a `[]T` directly: build a suite with `NewSuite(...)` and run
+`suite.Validate(rows)` to get a rich pass/fail report — including the complete list of
+failing row indices in `FailedIndices`, so you can quarantine bad records instead of just
+learning that _something_ failed.
 
 Think [Great Expectations](https://greatexpectations.io/), but Go-native, generic, and with
 zero runtime dependencies.
@@ -31,7 +32,7 @@ if err := suite.Validate(users).Err(); err != nil {
 - **Actionable results.** Each failure reports the count, percentage, a sample of offending
   values, and the **complete** list of failing row indices.
 - **Zero dependencies.** Standard library only.
-- **Test-friendly.** The `gxtest` sub-package plugs a suite straight into `*testing.T`.
+- **Test-friendly.** The `gxtest` sub-package is a thin adapter over the runtime API for `*testing.T`.
 
 ## Installation
 
@@ -97,8 +98,9 @@ suite := gx.NewSuite[T](expectation1, expectation2, ...)
 report := suite.Validate(rows)
 ```
 
-You rarely implement expectations directly — you build them with **column helpers** that take
-a label and an accessor function:
+**Typed column builders** (`Ordered`, `Str`, `Comparable`, `Field`) are the primary authoring
+path — you rarely implement `Expectation` directly. Each builder takes a label and an accessor
+function:
 
 ```go
 gx.Ordered("age", func(u User) int { return u.Age })  // a column
@@ -177,7 +179,9 @@ gx.Row("ship date after order date", func(o Order) bool {
 
 ### Row-count rules — `RowCount`
 
-Assertions about the _number_ of rows rather than their contents:
+Assertions about the _number_ of rows rather than their contents. `RowCount(name, pred)` is the
+table-level escape hatch for custom rules; `RowCountBetween` and `RowCountEqual` cover the
+common cases:
 
 ```go
 gx.RowCount[User]("at least one", func(n int) bool { return n > 0 })
@@ -253,7 +257,7 @@ gx report: 0/2 expectations passed
 
 ## Use in Tests
 
-The `gxtest` sub-package adapts a suite to Go's testing model, mirroring the
+The `gxtest` sub-package is a thin adapter over the runtime API, mirroring the
 assert/require split:
 
 ```go

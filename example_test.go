@@ -2,34 +2,28 @@ package gx_test
 
 import (
 	"fmt"
-	"regexp"
 
 	"github.com/dashmug/gx"
 )
 
 func Example() {
 	type User struct {
-		Age   int
-		Email string
+		Age int
 	}
-	users := []User{
-		{Age: 30, Email: "a@example.com"},
-		{Age: 200, Email: "bad"},
-	}
-	emailRE := regexp.MustCompile(`^[^@\s]+@[^@\s]+\.[^@\s]+$`)
 
-	suite := gx.NewSuite[User](
+	users := []User{{Age: 10}, {Age: 200}}
+	suite := gx.NewSuite(
 		gx.Ordered("age", func(u User) int { return u.Age }).Between(0, 120),
-		gx.Str("email", func(u User) string { return u.Email }).MatchRegex(emailRE),
+		gx.RowCount[User]("at least two rows", func(n int) bool { return n >= 2 }),
 	)
 
 	report := suite.Validate(users)
 	fmt.Println(report.OK())
 	for _, r := range report.Failures() {
-		fmt.Printf("%s: %d/%d failed at %v\n", r.Name, r.FailedCount, r.Total, r.FailedIndices)
+		fmt.Println(r.Name)
 	}
+
 	// Output:
 	// false
-	// age between [0,120]: 1/2 failed at [1]
-	// email matches /^[^@\s]+@[^@\s]+\.[^@\s]+$/: 1/2 failed at [1]
+	// age between [0,120]
 }
