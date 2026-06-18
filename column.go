@@ -139,10 +139,21 @@ func (c ComparableColumn[T, V]) In(vals ...V) Expectation[T] {
 	return inSet(fmt.Sprintf("%s in %v", c.name, vals), c.name, c.get, vals)
 }
 
+// NotIn asserts the value is not one of vals.
+func (c ComparableColumn[T, V]) NotIn(vals ...V) Expectation[T] {
+	return notInSet(fmt.Sprintf("%s not in %v", c.name, vals), c.name, c.get, vals)
+}
+
 // NotZero asserts the value is not the zero value of its type.
 func (c ComparableColumn[T, V]) NotZero() Expectation[T] {
 	var zero V
 	return newCol(c.name+" not zero", c.name, c.get, func(v V) bool { return v != zero })
+}
+
+// Zero asserts the value is the zero value of its type.
+func (c ComparableColumn[T, V]) Zero() Expectation[T] {
+	var zero V
+	return newCol(c.name+" zero", c.name, c.get, func(v V) bool { return v == zero })
 }
 
 // Satisfy asserts the value matches a custom predicate; check names the rule.

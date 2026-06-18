@@ -1,6 +1,9 @@
 package gx
 
-import "testing"
+import (
+	"reflect"
+	"testing"
+)
 
 type crow struct {
 	Active bool
@@ -19,6 +22,26 @@ func TestComparableInAndNotZero(t *testing.T) {
 	}
 	if rep.Results[1].FailedCount != 1 { // false is the zero value
 		t.Fatalf("NotZero failed=%d, want 1", rep.Results[1].FailedCount)
+	}
+}
+
+func TestComparableNotInAndZero(t *testing.T) {
+	// active [true, false, true]:
+	//   NotIn(false) fails index 1 (false is forbidden)
+	//   Zero() passes false (zero value for bool), fails true → FailedIndices=[0, 2]
+	rows := []crow{{Active: true}, {Active: false}, {Active: true}}
+	rep := NewSuite[crow](
+		Comparable("active", func(r crow) bool { return r.Active }).NotIn(false),
+		Comparable("active", func(r crow) bool { return r.Active }).Zero(),
+	).Validate(rows)
+
+	if rep.Results[0].FailedCount != 1 || rep.Results[0].FailedIndices[0] != 1 {
+		t.Fatalf("NotIn(false) FailedCount=%d FailedIndices=%v, want 1 and [1]",
+			rep.Results[0].FailedCount, rep.Results[0].FailedIndices)
+	}
+	if rep.Results[1].FailedCount != 2 || !reflect.DeepEqual(rep.Results[1].FailedIndices, []int{0, 2}) {
+		t.Fatalf("Zero() FailedCount=%d FailedIndices=%v, want 2 and [0 2] (true is non-zero for bool)",
+			rep.Results[1].FailedCount, rep.Results[1].FailedIndices)
 	}
 }
 
