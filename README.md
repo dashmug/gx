@@ -144,7 +144,7 @@ Embeds `Ordered`, so all of the above work too, plus:
 col := gx.Str("email", func(u User) string { return u.Email })
 
 col.MatchRegex(emailRE)         // matches a *regexp.Regexp
-col.NotMatchRegex(re)           // does not match *regexp.Regexp
+col.NotMatchRegex(emailRE)      // does not match *regexp.Regexp
 col.NotEmpty()                  // non-empty string
 col.Empty()                     // v == "" (matching rows pass)
 col.LenBetween(1, 100)          // rune count in [lo, hi]
@@ -152,7 +152,6 @@ col.LenEqual(10)                // rune count == n
 ```
 
 `LenBetween`/`LenEqual` count Unicode code points via `utf8.RuneCountInString`, not bytes. `Zero`/`Empty` pass rows that match; they are complements of `NotZero`/`NotEmpty`.
-
 
 ### `Comparable` — bools, enums, struct keys
 
