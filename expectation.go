@@ -57,6 +57,18 @@ func inSet[T any, V comparable](name, column string, get func(T) V, vals []V) Ex
 	})
 }
 
+// notInSet builds a set-exclusion expectation: value must NOT be in vals.
+func notInSet[T any, V comparable](name, column string, get func(T) V, vals []V) Expectation[T] {
+	set := make(map[V]struct{}, len(vals))
+	for _, v := range vals {
+		set[v] = struct{}{}
+	}
+	return newCol(name, column, get, func(v V) bool {
+		_, ok := set[v]
+		return !ok
+	})
+}
+
 // uniqueExpectation flags duplicate values in a column: the first occurrence of
 // a value passes; every later occurrence fails.
 type uniqueExpectation[T any, V comparable] struct {

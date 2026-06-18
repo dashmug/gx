@@ -33,6 +33,11 @@ func (c OrderedColumn[T, V]) In(vals ...V) Expectation[T] {
 	return inSet(fmt.Sprintf("%s in %v", c.name, vals), c.name, c.get, vals)
 }
 
+// NotIn asserts the value is not one of vals.
+func (c OrderedColumn[T, V]) NotIn(vals ...V) Expectation[T] {
+	return notInSet(fmt.Sprintf("%s not in %v", c.name, vals), c.name, c.get, vals)
+}
+
 // NotZero asserts the value is not the zero value of its type.
 func (c OrderedColumn[T, V]) NotZero() Expectation[T] {
 	var zero V

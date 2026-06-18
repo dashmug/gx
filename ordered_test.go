@@ -91,3 +91,32 @@ func TestSatisfy(t *testing.T) {
 		t.Fatalf("FailedCount=%d FailedIndices=%v, want 1 and [1]", res.FailedCount, res.FailedIndices)
 	}
 }
+
+func TestNotInForbiddenValues(t *testing.T) {
+	rows := []orow{{Age: 1}, {Age: 2}, {Age: 9}}
+	rep := NewSuite[orow](
+		Ordered("age", func(r orow) int { return r.Age }).NotIn(2, 3),
+	).Validate(rows)
+
+	res := rep.Results[0]
+	if res.Success {
+		t.Fatal("want failure: 2 is forbidden")
+	}
+	if res.Name != "age not in [2 3]" || res.Column != "age" {
+		t.Fatalf("Name=%q Column=%q", res.Name, res.Column)
+	}
+	if res.FailedCount != 1 || res.FailedIndices[0] != 1 {
+		t.Fatalf("FailedCount=%d FailedIndices=%v, want 1 and [1]", res.FailedCount, res.FailedIndices)
+	}
+}
+
+func TestNotInEmptySetVacuousPass(t *testing.T) {
+	rows := []orow{{Age: 0}, {Age: 99}}
+	rep := NewSuite[orow](
+		Ordered("age", func(r orow) int { return r.Age }).NotIn(),
+	).Validate(rows)
+
+	if !rep.OK() {
+		t.Fatal("NotIn() with no forbidden values should pass all rows")
+	}
+}
