@@ -44,6 +44,12 @@ func (c OrderedColumn[T, V]) NotZero() Expectation[T] {
 	return newCol(c.name+" not zero", c.name, c.get, func(v V) bool { return v != zero })
 }
 
+// Zero asserts the value is the zero value of its type.
+func (c OrderedColumn[T, V]) Zero() Expectation[T] {
+	var zero V
+	return newCol(c.name+" zero", c.name, c.get, func(v V) bool { return v == zero })
+}
+
 // Satisfy asserts the value matches a custom predicate; check names the rule.
 func (c OrderedColumn[T, V]) Satisfy(check string, pred func(V) bool) Expectation[T] {
 	return newCol(c.name+": "+check, c.name, c.get, pred)

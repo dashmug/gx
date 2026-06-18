@@ -120,3 +120,25 @@ func TestNotInEmptySetVacuousPass(t *testing.T) {
 		t.Fatal("NotIn() with no forbidden values should pass all rows")
 	}
 }
+
+func TestZeroOnlyNonZeroRowsFail(t *testing.T) {
+	// ages [0, 5, 0]: Zero() passes 0, fails 5 → FailedIndices=[1]
+	rows := []orow{{Age: 0}, {Age: 5}, {Age: 0}}
+	rep := NewSuite[orow](
+		Ordered("age", func(r orow) int { return r.Age }).Zero(),
+	).Validate(rows)
+
+	res := rep.Results[0]
+	if res.Success {
+		t.Fatal("want failure: non-zero age should fail Zero()")
+	}
+	if res.Name != "age zero" || res.Column != "age" {
+		t.Fatalf("Name=%q Column=%q", res.Name, res.Column)
+	}
+	if res.FailedCount != 1 {
+		t.Fatalf("FailedCount=%d, want 1", res.FailedCount)
+	}
+	if !reflect.DeepEqual(res.FailedIndices, []int{1}) {
+		t.Fatalf("FailedIndices=%v, want [1]", res.FailedIndices)
+	}
+}
