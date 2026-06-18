@@ -87,3 +87,36 @@ func TestRowCountNameStability(t *testing.T) {
 		t.Fatalf("Name()=%q want \"count check\"", exp.Name())
 	}
 }
+
+func TestRowCountCustomPredicateFailure(t *testing.T) {
+	rep := NewSuite[int](RowCount[int]("even row count", func(n int) bool { return n%2 == 0 })).Validate([]int{1, 2, 3})
+	res := rep.Results[0]
+	if res.Success {
+		t.Fatal("expected custom RowCount predicate to fail")
+	}
+	if res.Name != "even row count" {
+		t.Fatalf("Name = %q, want %q", res.Name, "even row count")
+	}
+	if res.Column != "" {
+		t.Fatalf("Column = %q, want empty", res.Column)
+	}
+	if res.Total != 0 {
+		t.Fatalf("Total = %d, want 0 for table-level RowCount", res.Total)
+	}
+	if res.FailedCount != 0 {
+		t.Fatalf("FailedCount = %d, want 0 for table-level RowCount", res.FailedCount)
+	}
+	if len(res.FailedIndices) != 0 {
+		t.Fatalf("FailedIndices = %v, want empty", res.FailedIndices)
+	}
+	if len(res.SampleValues) != 0 {
+		t.Fatalf("SampleValues = %v, want empty", res.SampleValues)
+	}
+}
+
+func TestRowCountCustomPredicatePassesOnNilRows(t *testing.T) {
+	rep := NewSuite[int](RowCount[int]("empty ok", func(n int) bool { return n == 0 })).Validate(nil)
+	if !rep.OK() {
+		t.Fatalf("expected RowCount predicate over nil rows to pass; report: %v", rep.Results[0])
+	}
+}
