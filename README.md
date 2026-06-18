@@ -125,7 +125,13 @@ col := gx.Ordered("age", func(u User) int { return u.Age })
 
 col.Between(0, 120)             // lo <= v <= hi (inclusive)
 col.In(1, 2, 3)                 // v is one of the listed values
+col.NotIn(4, 5)                 // v not in listed values
 col.NotZero()                   // v != zero value
+col.Zero()                      // v == zero value (matching rows pass)
+col.GreaterThan(0)              // v > bound
+col.LessThan(100)               // v < bound
+col.GreaterOrEqual(0)           // v >= bound
+col.LessOrEqual(100)            // v <= bound
 col.Satisfy("even", isEven)     // custom predicate func(V) bool
 col.Unique()                    // every value distinct
 ```
@@ -138,10 +144,15 @@ Embeds `Ordered`, so all of the above work too, plus:
 col := gx.Str("email", func(u User) string { return u.Email })
 
 col.MatchRegex(emailRE)         // matches a *regexp.Regexp
+col.NotMatchRegex(re)           // does not match *regexp.Regexp
 col.NotEmpty()                  // non-empty string
-col.Between("a", "m")           // inherited from Ordered
-col.Unique()                    // inherited from Ordered
+col.Empty()                     // v == "" (matching rows pass)
+col.LenBetween(1, 100)          // rune count in [lo, hi]
+col.LenEqual(10)                // rune count == n
 ```
+
+`LenBetween`/`LenEqual` count Unicode code points via `utf8.RuneCountInString`, not bytes. `Zero`/`Empty` pass rows that match; they are complements of `NotZero`/`NotEmpty`.
+
 
 ### `Comparable` — bools, enums, struct keys
 
@@ -151,7 +162,9 @@ For values that are comparable but not ordered:
 col := gx.Comparable("status", func(o Order) Status { return o.Status })
 
 col.In(Active, Pending)         // v is one of the listed values
+col.NotIn(Closed, Cancelled)    // v is not one of the listed values
 col.NotZero()                   // v != zero value
+col.Zero()                      // v == zero value (matching rows pass)
 col.Satisfy("terminal", isDone) // custom predicate func(V) bool
 col.Unique()                    // every value distinct
 ```

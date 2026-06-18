@@ -16,4 +16,5 @@
 // Result per expectation, including the complete list of failing row indices for
 // quarantining bad records. Table-level checks use RowCount / RowCountBetween /
 // RowCountEqual; tests use the same suite via the gxtest sub-package.
+// Typed columns also include NotIn/Zero, comparison helpers, and rune-count string length checks.
 package gx
