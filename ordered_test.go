@@ -142,3 +142,52 @@ func TestZeroOnlyNonZeroRowsFail(t *testing.T) {
 		t.Fatalf("FailedIndices=%v, want [1]", res.FailedIndices)
 	}
 }
+
+func TestOrderingMethodsBoundaries(t *testing.T) {
+	rows := []orow{{Age: 10}, {Age: 20}, {Age: 30}}
+
+	cases := []struct {
+		name      string
+		exp       Expectation[orow]
+		wantFail  []int
+		wantLabel string
+	}{
+		{
+			name:      "gt",
+			exp:       Ordered("age", func(r orow) int { return r.Age }).GreaterThan(20),
+			wantFail:  []int{0, 1},
+			wantLabel: "age > 20",
+		},
+		{
+			name:      "gte",
+			exp:       Ordered("age", func(r orow) int { return r.Age }).GreaterOrEqual(20),
+			wantFail:  []int{0},
+			wantLabel: "age >= 20",
+		},
+		{
+			name:      "lt",
+			exp:       Ordered("age", func(r orow) int { return r.Age }).LessThan(20),
+			wantFail:  []int{1, 2},
+			wantLabel: "age < 20",
+		},
+		{
+			name:      "lte",
+			exp:       Ordered("age", func(r orow) int { return r.Age }).LessOrEqual(20),
+			wantFail:  []int{2},
+			wantLabel: "age <= 20",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			rep := NewSuite[orow](tc.exp).Validate(rows)
+			res := rep.Results[0]
+			if res.Name != tc.wantLabel {
+				t.Fatalf("Name=%q, want %q", res.Name, tc.wantLabel)
+			}
+			if !reflect.DeepEqual(res.FailedIndices, tc.wantFail) {
+				t.Fatalf("FailedIndices=%v, want %v", res.FailedIndices, tc.wantFail)
+			}
+		})
+	}
+}

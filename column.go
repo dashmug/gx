@@ -28,6 +28,42 @@ func (c OrderedColumn[T, V]) Between(lo, hi V) Expectation[T] {
 	)
 }
 
+// GreaterThan asserts value > bound.
+func (c OrderedColumn[T, V]) GreaterThan(bound V) Expectation[T] {
+	return newCol(
+		fmt.Sprintf("%s > %v", c.name, bound),
+		c.name, c.get,
+		func(v V) bool { return v > bound },
+	)
+}
+
+// LessThan asserts value < bound.
+func (c OrderedColumn[T, V]) LessThan(bound V) Expectation[T] {
+	return newCol(
+		fmt.Sprintf("%s < %v", c.name, bound),
+		c.name, c.get,
+		func(v V) bool { return v < bound },
+	)
+}
+
+// GreaterOrEqual asserts value >= bound.
+func (c OrderedColumn[T, V]) GreaterOrEqual(bound V) Expectation[T] {
+	return newCol(
+		fmt.Sprintf("%s >= %v", c.name, bound),
+		c.name, c.get,
+		func(v V) bool { return v >= bound },
+	)
+}
+
+// LessOrEqual asserts value <= bound.
+func (c OrderedColumn[T, V]) LessOrEqual(bound V) Expectation[T] {
+	return newCol(
+		fmt.Sprintf("%s <= %v", c.name, bound),
+		c.name, c.get,
+		func(v V) bool { return v <= bound },
+	)
+}
+
 // In asserts the value is one of vals.
 func (c OrderedColumn[T, V]) In(vals ...V) Expectation[T] {
 	return inSet(fmt.Sprintf("%s in %v", c.name, vals), c.name, c.get, vals)
