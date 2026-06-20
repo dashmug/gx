@@ -1,6 +1,8 @@
 // Package gx validates an in-memory slice of structs against declarative,
 // type-safe expectations and returns a rich pass/fail report.
 //
+// See https://github.com/dashmug/gx/blob/main/docs/README.md for complete documentation.
+//
 // Build a suite from typed column accessors and run it over your data:
 //
 //	suite := gx.NewSuite[User](

@@ -3,12 +3,12 @@
 Type-safe, declarative data quality for Go.
 
 `gx` validates a `[]T` directly: build a suite with `NewSuite(...)` and run
-`suite.Validate(rows)` to get a rich pass/fail report — including the complete list of
-failing row indices in `FailedIndices`, so you can quarantine bad records instead of just
-learning that _something_ failed.
+`suite.Validate(rows)` to get a rich pass/fail report — including the complete
+list of failing row indices in `FailedIndices`, so you can quarantine bad
+records instead of just learning that _something_ failed.
 
-Think [Great Expectations](https://greatexpectations.io/), but Go-native, generic, and with
-zero runtime dependencies.
+Think [Great Expectations](https://greatexpectations.io/), but Go-native,
+generic, and with zero runtime dependencies.
 
 ```go
 suite := gx.NewSuite[User](
@@ -25,14 +25,17 @@ if err := suite.Validate(users).Err(); err != nil {
 
 ## Why gx
 
-- **Type-safe.** Field access is a closure (`func(u User) int`), checked by the compiler. No
-  reflection, no stringly-typed field paths, no runtime type errors.
-- **Collect-all.** Every expectation runs on every `Validate` call. You get _all_ failures at
-  once, not just the first — essential for triaging a dirty dataset.
-- **Actionable results.** Each failure reports the count, percentage, a sample of offending
-  values, and the **complete** list of failing row indices.
+- **Type-safe.** Field access is a closure (`func(u User) int`), checked by the
+  compiler. No reflection, no stringly-typed field paths, no runtime type
+  errors.
+- **Collect-all.** Every expectation runs on every `Validate` call. You get
+  _all_ failures at once, not just the first — essential for triaging a dirty
+  dataset.
+- **Actionable results.** Each failure reports the count, percentage, a sample
+  of offending values, and the **complete** list of failing row indices.
 - **Zero dependencies.** Standard library only.
-- **Test-friendly.** The `gxtest` sub-package is a thin adapter over the runtime API for `*testing.T`.
+- **Test-friendly.** The `gxtest` sub-package is a thin adapter over the runtime
+  API for `*testing.T`.
 
 ## Installation
 
@@ -86,29 +89,30 @@ age between [0,120]: 1/2 failed at [1]
 email matches /^[^@\s]+@[^@\s]+\.[^@\s]+$/: 1/2 failed at [1]
 ```
 
-Row `1` (the `{200, "bad"}` user) failed both checks, and `gx` tells you exactly which row.
+Row `1` (the `{200, "bad"}` user) failed both checks, and `gx` tells you exactly
+which row.
 
 ## Core Concepts
 
-A **`Suite[T]`** is an ordered set of **expectations** over rows of type `T`. Calling
-`Validate(rows)` runs all of them and returns a **`Report`**.
+A **`Suite[T]`** is an ordered set of **expectations** over rows of type `T`.
+Calling `Validate(rows)` runs all of them and returns a **`Report`**.
 
 ```go
 suite := gx.NewSuite[T](expectation1, expectation2, ...)
 report := suite.Validate(rows)
 ```
 
-**Typed column builders** (`Ordered`, `Str`, `Comparable`, `Field`) are the primary authoring
-path — you rarely implement `Expectation` directly. Each builder takes a label and an accessor
-function:
+**Typed column builders** (`Ordered`, `Str`, `Comparable`, `Field`) are the
+primary authoring path — you rarely implement `Expectation` directly. Each
+builder takes a label and an accessor function:
 
 ```go
 gx.Ordered("age", func(u User) int { return u.Age })  // a column
     .Between(0, 120)                                   // an expectation
 ```
 
-The label (`"age"`) is purely for the report — it can differ from the struct field, so
-computed values are first-class:
+The label (`"age"`) is purely for the report — it can differ from the struct
+field, so computed values are first-class:
 
 ```go
 gx.Ordered("name length", func(u User) int { return len(u.Name) }).Between(1, 100)
@@ -116,7 +120,8 @@ gx.Ordered("name length", func(u User) int { return len(u.Name) }).Between(1, 10
 
 ## Column Types
 
-Pick the builder that matches your field's type. Each exposes the checks that make sense for it.
+Pick the builder that matches your field's type. Each exposes the checks that
+make sense for it.
 
 ### `Ordered` — integers, floats, ordered values
 
@@ -151,7 +156,9 @@ col.LenBetween(1, 100)          // rune count in [lo, hi]
 col.LenEqual(10)                // rune count == n
 ```
 
-`LenBetween`/`LenEqual` count Unicode code points via `utf8.RuneCountInString`, not bytes. `Zero`/`Empty` pass rows that match; they are complements of `NotZero`/`NotEmpty`.
+`LenBetween`/`LenEqual` count Unicode code points via `utf8.RuneCountInString`,
+not bytes. `Zero`/`Empty` pass rows that match; they are complements of
+`NotZero`/`NotEmpty`.
 
 ### `Comparable` — bools, enums, struct keys
 
@@ -191,9 +198,9 @@ gx.Row("ship date after order date", func(o Order) bool {
 
 ### Row-count rules — `RowCount`
 
-Assertions about the _number_ of rows rather than their contents. `RowCount(name, pred)` is the
-table-level escape hatch for custom rules; `RowCountBetween` and `RowCountEqual` cover the
-common cases:
+Assertions about the _number_ of rows rather than their contents.
+`RowCount(name, pred)` is the table-level escape hatch for custom rules;
+`RowCountBetween` and `RowCountEqual` cover the common cases:
 
 ```go
 gx.RowCount[User]("at least one", func(n int) bool { return n > 0 })
@@ -250,8 +257,9 @@ type Result struct {
 }
 ```
 
-`FailedIndices` is **never truncated** — it always lists every failing row, so you can act on
-all of them. `SampleValues` _is_ capped (default 20) for readable reports.
+`FailedIndices` is **never truncated** — it always lists every failing row, so
+you can act on all of them. `SampleValues` _is_ capped (default 20) for readable
+reports.
 
 ### Human-readable output
 
@@ -295,7 +303,8 @@ func TestUserData(t *testing.T) {
 }
 ```
 
-`gxtest` works with any `TestingT` (`*testing.T` and `*testing.B` satisfy it out of the box):
+`gxtest` works with any `TestingT` (`*testing.T` and `*testing.B` satisfy it out
+of the box):
 
 ```go
 type TestingT interface {
@@ -309,8 +318,8 @@ type TestingT interface {
 
 ### Sample cap
 
-Limit how many offending sample values each `Result` retains (default `gx.DefaultSampleCap`,
-which is 20):
+Limit how many offending sample values each `Result` retains (default
+`gx.DefaultSampleCap`, which is 20):
 
 ```go
 suite := gx.NewSuite[User](...).WithSampleCap(5)
@@ -329,12 +338,31 @@ type Expectation[T any] interface {
 }
 ```
 
-Set `Result.Err` if evaluation itself fails — the suite normalizes a non-nil `Err` to
-`Success = false`, so a broken check can never silently pass.
+Set `Result.Err` if evaluation itself fails — the suite normalizes a non-nil
+`Err` to `Success = false`, so a broken check can never silently pass.
 
 ## Behavior Notes
 
-- **Empty input passes vacuously.** A column check over zero rows succeeds (`Total == 0`).
-- **`Validate` never panics** and never returns an error directly — gate via `Report.Err()`.
-- **`Unique`**: the first occurrence of a value passes; every later duplicate fails.
+- **Empty input passes vacuously.** A column check over zero rows succeeds
+  (`Total == 0`).
+- **`Validate` never panics** and never returns an error directly — gate via
+  `Report.Err()`.
+- **`Unique`**: the first occurrence of a value passes; every later duplicate
+  fails.
 - **Results preserve declaration order.**
+
+## Documentation
+
+See the [full documentation](docs/) for:
+
+- [Concepts](docs/concepts/) - Core concepts and usage patterns
+- [Built-in Expectations](docs/expectations/) - Complete reference of all
+  validation functions
+- [Custom Expectations](docs/custom/) - How to extend `gx` with your own
+  validation logic
+- [Comparisons](docs/comparison/) - How `gx` differs from other validation
+  approaches
+- [Cookbook](docs/cookbook/) - Practical examples and patterns for real-world
+  usage
+- [API Reference](docs/reference/) - Complete reference for all public types and
+  functions

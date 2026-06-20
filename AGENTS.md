@@ -2,9 +2,10 @@
 
 ## Project Overview
 
-`gx` is a Go data-quality library. It validates an in-memory slice of structs against
-declarative, type-safe expectations and returns a structured pass/fail report. Designed for
-pipeline gates and test assertions; zero runtime dependencies.
+`gx` is a Go data-quality library. It validates an in-memory slice of structs
+against declarative, type-safe expectations and returns a structured pass/fail
+report. Designed for pipeline gates and test assertions; zero runtime
+dependencies.
 
 - Module: `github.com/dashmug/gx`
 - Subpackage: `github.com/dashmug/gx/gxtest` (test helper)
@@ -29,8 +30,10 @@ Report
 
 Column builders produce `Expectation[T]` values via two internal helpers:
 
-- `evalColumn` — single-pass per-row loop; boxes failing values into `SampleValues` (capped); `FailedIndices` is always complete
-- `uniqueExpectation` — single-pass with a `seen` map; first occurrence passes, later duplicates fail
+- `evalColumn` — single-pass per-row loop; boxes failing values into
+  `SampleValues` (capped); `FailedIndices` is always complete
+- `uniqueExpectation` — single-pass with a `seen` map; first occurrence passes,
+  later duplicates fail
 
 ## Key Directories
 
@@ -39,7 +42,8 @@ gx/                   Package root (package gx)
 gx/gxtest/            Test-helper subpackage (package gxtest)
 ```
 
-All source and tests live flat in the package root. No subdirectories except `gxtest/`.
+All source and tests live flat in the package root. No subdirectories except
+`gxtest/`.
 
 ## Development Commands
 
@@ -69,22 +73,31 @@ go test -run TestBetweenCountsIndicesPercent ./...
 
 **Naming**
 
-- Exported types: `PascalCase` — `Result`, `Report`, `Suite`, `OrderedColumn`, `ComparableColumn`
-- Unexported internals: `camelCase` — `evalColumn`, `colExpectation`, `uniqueExpectation`, `rowExpectation`
-- Constructor functions mirror type names: `Ordered(...)`, `Str(...)`, `Comparable(...)`, `Field(...)`
-- Expectation names appear verbatim in `Result.Name` — e.g. `"age between [0,120]"`, `"email: non-empty"`
+- Exported types: `PascalCase` — `Result`, `Report`, `Suite`, `OrderedColumn`,
+  `ComparableColumn`
+- Unexported internals: `camelCase` — `evalColumn`, `colExpectation`,
+  `uniqueExpectation`, `rowExpectation`
+- Constructor functions mirror type names: `Ordered(...)`, `Str(...)`,
+  `Comparable(...)`, `Field(...)`
+- Expectation names appear verbatim in `Result.Name` — e.g.
+  `"age between [0,120]"`, `"email: non-empty"`
 
 **Generics**
 
-- Every public API is fully generic: `Suite[T]`, `Expectation[T]`, `OrderedColumn[T, V]`, etc.
-- Type constraints: `V cmp.Ordered` for ordered columns, `V comparable` for comparable/unique, `V any` for Field
+- Every public API is fully generic: `Suite[T]`, `Expectation[T]`,
+  `OrderedColumn[T, V]`, etc.
+- Type constraints: `V cmp.Ordered` for ordered columns, `V comparable` for
+  comparable/unique, `V any` for Field
 - No reflection anywhere
 
 **Error handling**
 
-- `Validate` never panics and never returns an error directly; use `Report.Err()` for pipeline gates
-- `ValidationError` implements `error`; supports `errors.As` to extract the full `Report`
-- Custom `Expectation` implementations: if `Result.Err != nil`, `Suite.Validate` forces `Success = false`
+- `Validate` never panics and never returns an error directly; use
+  `Report.Err()` for pipeline gates
+- `ValidationError` implements `error`; supports `errors.As` to extract the full
+  `Report`
+- Custom `Expectation` implementations: if `Result.Err != nil`, `Suite.Validate`
+  forces `Success = false`
 
 **Collect-all semantics**
 
@@ -113,9 +126,11 @@ func (c OrderedColumn[T, V]) Between(lo, hi V) Expectation[T] {
 
 **String rendering** (`render.go`)
 
-- `Result.String()` → `"✓ name (N rows)"` or `"✗ name  M/N failed (P%)  e.g. [vals] @ [indices]"`
+- `Result.String()` → `"✓ name (N rows)"` or
+  `"✗ name  M/N failed (P%)  e.g. [vals] @ [indices]"`
 - `Report.String()` → header line + indented result lines
-- `truncList`: `[a b c]` when ≤ cap; `[a b c …]` (space before U+2026) when over cap
+- `truncList`: `[a b c]` when ≤ cap; `[a b c …]` (space before U+2026) when over
+  cap
 
 ## Important Files
 
@@ -135,13 +150,16 @@ func (c OrderedColumn[T, V]) Between(lo, hi V) Expectation[T] {
 - **Go 1.23+** required (generic type inference, `cmp.Ordered`)
 - **Zero runtime dependencies** — `go.mod` has no `require` block
 - **Makefile** for common dev operations; `make check` is the full quality gate
-- `golangci-lint` for linting (`.golangci.yml` in the repo root); not required at runtime
+- `golangci-lint` for linting (`.golangci.yml` in the repo root); not required
+  at runtime
 
 ## Testing & QA
 
 **Framework**: standard `testing` package only — no testify, no gomock.
 
-**Test file locations**: flat alongside source (`suite_test.go`, `column_test.go`, etc.); `gxtest/gxtest_test.go` is `package gxtest_test` (external test package).
+**Test file locations**: flat alongside source (`suite_test.go`,
+`column_test.go`, etc.); `gxtest/gxtest_test.go` is `package gxtest_test`
+(external test package).
 
 **Pattern**: inline, direct assertion — no table-driven tests, no subtests.
 
@@ -155,11 +173,16 @@ func TestBetweenCountsIndicesPercent(t *testing.T) {
 }
 ```
 
-**What tests assert**: `Result` fields (`FailedCount`, `FailedIndices`, `SampleValues`, `FailedPercent`, `Name`, `Success`), `Report.OK()`, `Report.Err()`.
+**What tests assert**: `Result` fields (`FailedCount`, `FailedIndices`,
+`SampleValues`, `FailedPercent`, `Name`, `Success`), `Report.OK()`,
+`Report.Err()`.
 
-**Required gate**: `go test -race ./...` must pass on both `github.com/dashmug/gx` and `github.com/dashmug/gx/gxtest`.
+**Required gate**: `go test -race ./...` must pass on both
+`github.com/dashmug/gx` and `github.com/dashmug/gx/gxtest`.
 
-**Coverage expectations**: each new expectation type gets a test covering failure count, failed index recording, sample capping, and the vacuous-pass (empty input) case.
+**Coverage expectations**: each new expectation type gets a test covering
+failure count, failed index recording, sample capping, and the vacuous-pass
+(empty input) case.
 
 **gxtest usage in tests**:
 

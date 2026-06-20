@@ -1,7 +1,7 @@
 # Contributing to gx
 
-Thanks for your interest in improving `gx`. This guide covers the development workflow,
-design principles, and conventions the project follows.
+Thanks for your interest in improving `gx`. This guide covers the development
+workflow, design principles, and conventions the project follows.
 
 ## Getting Started
 
@@ -11,8 +11,8 @@ cd gx
 make check          # fmt-check + vet + test-race
 ```
 
-That's the whole setup. `gx` has **zero runtime dependencies**. The `Makefile` wraps standard
-`go` tooling — run `make help` to list all available targets.
+That's the whole setup. `gx` has **zero runtime dependencies**. The `Makefile`
+wraps standard `go` tooling — run `make help` to list all available targets.
 
 Requires **Go 1.23+**.
 
@@ -31,32 +31,36 @@ gx/
 └── gxtest/          Test-helper sub-package (Check, Require)
 ```
 
-Source and tests live flat in the package root. The only sub-package is `gxtest/`.
+Source and tests live flat in the package root. The only sub-package is
+`gxtest/`.
 
 ## Design Principles
 
-These are non-negotiable. A change that violates one of them will not be accepted without
-first revisiting the principle itself.
+These are non-negotiable. A change that violates one of them will not be
+accepted without first revisiting the principle itself.
 
-1. **Zero runtime dependencies.** The library imports only the Go standard library. `go.mod`
-   has no `require` block, and it stays that way.
+1. **Zero runtime dependencies.** The library imports only the Go standard
+   library. `go.mod` has no `require` block, and it stays that way.
 
-2. **Type-safe, no reflection.** Field access is always a typed closure (`func(T) V`) resolved
-   at compile time. We never use `reflect` or stringly-typed field paths. If a check can't be
-   expressed with generics, it belongs in a custom `Expectation`, not in reflection.
+2. **Type-safe, no reflection.** Field access is always a typed closure
+   (`func(T) V`) resolved at compile time. We never use `reflect` or
+   stringly-typed field paths. If a check can't be expressed with generics, it
+   belongs in a custom `Expectation`, not in reflection.
 
-3. **Collect-all, never fail-fast.** `Validate` runs _every_ expectation and returns _every_
-   result. Short-circuiting on the first failure is a non-starter — surfacing all problems at
-   once is the point of the library.
+3. **Collect-all, never fail-fast.** `Validate` runs _every_ expectation and
+   returns _every_ result. Short-circuiting on the first failure is a
+   non-starter — surfacing all problems at once is the point of the library.
 
-4. **Never panic.** `Validate` must not panic on any input, including `nil` slices and empty
-   data. Validation failures are data (`Result`), not exceptions.
+4. **Never panic.** `Validate` must not panic on any input, including `nil`
+   slices and empty data. Validation failures are data (`Result`), not
+   exceptions.
 
-5. **Actionable results.** `FailedIndices` is always complete (never truncated) so callers can
-   quarantine every bad row. Only `SampleValues` is capped, and only for readable reports.
+5. **Actionable results.** `FailedIndices` is always complete (never truncated)
+   so callers can quarantine every bad row. Only `SampleValues` is capped, and
+   only for readable reports.
 
-6. **Empty input passes vacuously.** A check over zero rows succeeds. This keeps suites
-   composable across datasets of any size.
+6. **Empty input passes vacuously.** A check over zero rows succeeds. This keeps
+   suites composable across datasets of any size.
 
 ## Adding a New Expectation
 
@@ -64,9 +68,9 @@ Most contributions add a check. There are two ways, depending on the check.
 
 ### A new column method (most common)
 
-If the check operates on a single column value, add a method to the relevant column type in
-`column.go`. It returns an `Expectation[T]` built via the shared `newCol` / `inSet` helpers —
-never construct a `Result` by hand.
+If the check operates on a single column value, add a method to the relevant
+column type in `column.go`. It returns an `Expectation[T]` built via the shared
+`newCol` / `inSet` helpers — never construct a `Result` by hand.
 
 ```go
 // Positive asserts the value is greater than zero.
@@ -76,13 +80,13 @@ func (c OrderedColumn[T, V]) Positive() Expectation[T] {
 }
 ```
 
-The first `newCol` argument becomes `Result.Name` — make it read naturally in a report
-(`"age positive"`, not `"PositiveCheck"`).
+The first `newCol` argument becomes `Result.Name` — make it read naturally in a
+report (`"age positive"`, not `"PositiveCheck"`).
 
 ### A custom `Expectation`
 
-For checks the column helpers can't express (aggregates, cross-row logic), implement the
-interface directly in `expectation.go`:
+For checks the column helpers can't express (aggregates, cross-row logic),
+implement the interface directly in `expectation.go`:
 
 ```go
 type Expectation[T any] interface {
@@ -93,9 +97,10 @@ type Expectation[T any] interface {
 
 - Honor `opts.SampleCap` when populating `SampleValues`.
 - Keep `FailedIndices` complete (uncapped).
-- Set `Result.Err` if evaluation itself fails — the suite normalizes a non-nil `Err` to
-  `Success = false`, so a broken check can never silently pass.
-- A single pass over `rows` is the norm; avoid extra allocations on the hot path.
+- Set `Result.Err` if evaluation itself fails — the suite normalizes a non-nil
+  `Err` to `Success = false`, so a broken check can never silently pass.
+- A single pass over `rows` is the norm; avoid extra allocations on the hot
+  path.
 
 ## Testing
 
@@ -108,20 +113,22 @@ type Expectation[T any] interface {
 
 ### Conventions
 
-- **Standard library only.** Use the `testing` package — no testify, no mocking frameworks.
-- **Inline, direct assertions.** No table-driven tests, no subtests. Keep each test focused on
-  one behavior.
-- Test files mirror source files (`column.go` → `column_test.go`, etc.). Tests are
-  `package gx`; `gxtest` external tests are `package gxtest_test`.
+- **Standard library only.** Use the `testing` package — no testify, no mocking
+  frameworks.
+- **Inline, direct assertions.** No table-driven tests, no subtests. Keep each
+  test focused on one behavior.
+- Test files mirror source files (`column.go` → `column_test.go`, etc.). Tests
+  are `package gx`; `gxtest` external tests are `package gxtest_test`.
 
 ### What to assert
 
 Test behavior, not plumbing. For an expectation, cover:
 
 - The **failure count** and that `Success` is correct.
-- The **failed indices** — assert the exact indices, e.g. `FailedIndices[0] == 1`.
-- **Sample capping** — that `SampleValues` respects `SampleCap` while `FailedIndices` stays
-  complete.
+- The **failed indices** — assert the exact indices, e.g.
+  `FailedIndices[0] == 1`.
+- **Sample capping** — that `SampleValues` respects `SampleCap` while
+  `FailedIndices` stays complete.
 - The **vacuous-pass** case — empty/`nil` input succeeds.
 
 ```go
@@ -139,8 +146,9 @@ func TestPositiveFlagsNonPositive(t *testing.T) {
 }
 ```
 
-Guard slice indexing with a length check before asserting `FailedIndices[0]`, so a regression
-that empties the slice fails with a clear message instead of a panic.
+Guard slice indexing with a length check before asserting `FailedIndices[0]`, so
+a regression that empties the slice fails with a clear message instead of a
+panic.
 
 ### Required gate
 
@@ -161,24 +169,27 @@ make test-race
 ## Code Conventions
 
 - **Formatting:** `gofmt`. No exceptions, no custom style.
-- **Naming:** exported types are `PascalCase`; constructor functions mirror the type they build
-  (`Ordered` → `OrderedColumn`). Unexported helpers are `camelCase`.
-- **Comments explain _why_, not _what_.** Document non-obvious intent and invariants; don't
-  restate the code. Keep godoc on every exported symbol.
-- **No dead code.** No commented-out blocks, no `TODO`s left for later — git has the history,
-  and unfinished work shouldn't ship.
+- **Naming:** exported types are `PascalCase`; constructor functions mirror the
+  type they build (`Ordered` → `OrderedColumn`). Unexported helpers are
+  `camelCase`.
+- **Comments explain _why_, not _what_.** Document non-obvious intent and
+  invariants; don't restate the code. Keep godoc on every exported symbol.
+- **No dead code.** No commented-out blocks, no `TODO`s left for later — git has
+  the history, and unfinished work shouldn't ship.
 
 ## Commit & PR Conventions
 
-- **Conventional Commits** for messages: `feat:`, `fix:`, `docs:`, `test:`, `refactor:`,
-  `chore:`. Keep the subject under ~72 characters and in the imperative mood.
+- **Conventional Commits** for messages: `feat:`, `fix:`, `docs:`, `test:`,
+  `refactor:`, `chore:`. Keep the subject under ~72 characters and in the
+  imperative mood.
 
   ```
   feat: add Positive check to OrderedColumn
   fix: cap SampleValues in uniqueExpectation
   ```
 
-- One logical change per commit; keep the TDD red→green cycle within a single, reviewable PR.
+- One logical change per commit; keep the TDD red→green cycle within a single,
+  reviewable PR.
 - PRs should describe _what_ changed and _why_, and note any new public API.
 
 ### Before you submit
