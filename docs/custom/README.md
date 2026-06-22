@@ -5,7 +5,7 @@
 How to extend gx with your own validation logic.
 
 - [Implementing the Expectation Interface](#implementing-the-expectation-interface)
-- [Using the evalColumn Helper](#using-the-evcolumn-helper)
+- [Using the EvalColumn Helper](#using-the-evalcolumn-helper)
 - [Best Practices](#best-practices)
 - [Examples](#examples)
 
@@ -50,13 +50,13 @@ func (e TrustedDomainExpectation[T]) Evaluate(rows []T, opts gx.EvalOptions) gx.
 }
 ```
 
-## Using the evalColumn Helper
+## Using the EvalColumn Helper
 
-Most custom expectations will leverage the `evalColumn` helper function, which
+Most custom expectations will leverage the EvalColumn helper function, which
 handles row iteration, result aggregation, and common reporting:
 
 ```go
-func evalColumn[T, V any](name, column string, rows []T,
+func EvalColumn[T, V any](name, column string, rows []T,
     get func(T) V, pred func(V) bool, opts EvalOptions) Result
 ```
 

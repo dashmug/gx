@@ -7,6 +7,7 @@ Complete reference for the `gx` library public API.
 - [Suite](#suite)
 - [Column Builders](#column-builders)
 - [Expectations](#expectations)
+- [EvalColumn](#evalcolumn)
 - [Report and Result](#report-and-result)
 - [Testing Integration](#testing-integration)
 
@@ -25,7 +26,7 @@ suite := gx.NewSuite[User](
 )
 ```
 
-### Suite[T].Validate(rows []T) \*Report
+### Suite[T].Validate(rows []T) Report
 
 Runs all expectations in the suite against the provided data and returns a
 report.
@@ -34,9 +35,10 @@ report.
 report := suite.Validate(users)
 ```
 
-### Suite[T].WithSampleCap(cap int) \*Suite[T]
+### Suite[T].WithSampleCap(cap int) *Suite[T]
 
-Returns a new suite with the specified sample cap for result reporting.
+Sets the maximum sample values retained per result and returns the same suite
+for chaining.
 
 ```go
 suite := gx.NewSuite[User](/* expectations */).WithSampleCap(5)
@@ -140,6 +142,69 @@ Functions for dataset-level validations:
   row count predicate
 - `RowCountBetween[T any](lo, hi int) Expectation[T]` - Row count between bounds
 - `RowCountEqual[T any](want int) Expectation[T]` - Exact row count
+
+## EvalColumn
+
+Exported helper for implementing custom `Expectation[T]` types. It runs the
+shared per-row loop used by the built-in column builders: extract a value with
+`get`, test it with `pred`, and aggregate failures into a `Result`.
+
+### EvalColumn[T, V any](name, column string, rows []T, get func(T) V, pred func(V) bool, opts EvalOptions) Result
+
+```go
+func EvalColumn[T, V any](name, column string, rows []T,
+    get func(T) V, pred func(V) bool, opts EvalOptions) Result
+```
+
+Parameters:
+
+- `name` - expectation name shown in reports (`Result.Name`)
+- `column` - column label shown in reports (`Result.Column`; use `""` for
+  cross-field checks)
+- `rows` - data to evaluate
+- `get` - accessor that extracts the value to check from each row
+- `pred` - returns `true` when the value is valid, `false` when it fails
+- `opts` - evaluation options from the suite (see `EvalOptions` below)
+
+Result semantics:
+
+- `Total` - `len(rows)` (number of rows evaluated)
+- `FailedCount` - rows where `pred(get(row))` returned `false`
+- `FailedPercent` - `FailedCount / Total * 100` when `Total > 0`, otherwise `0`
+- `FailedIndices` - complete list of failing row indices (not capped)
+- `SampleValues` - failing values boxed as `[]any`, capped at
+  `opts.SampleCap` (first failures retained)
+- `Success` - `true` when `FailedCount == 0`
+- Empty input (`len(rows) == 0`) passes vacuously: `Success` is `true`,
+  `Total` and `FailedCount` are `0`, and `FailedIndices` / `SampleValues` are
+  empty
+
+When a suite runs, `opts.SampleCap` comes from `Suite.WithSampleCap` (default
+`DefaultSampleCap`, currently 20). Call `EvalColumn` from your type's
+`Evaluate` method and pass through the `opts` argument unchanged.
+
+```go
+type trustedDomainExpectation[T any] struct {
+    name   string
+    column string
+    get    func(T) string
+    domain string
+}
+
+func (e trustedDomainExpectation[T]) Name() string { return e.name }
+
+func (e trustedDomainExpectation[T]) Evaluate(rows []T, opts gx.EvalOptions) gx.Result {
+    return gx.EvalColumn(e.name, e.column, rows, e.get, func(email string) bool {
+        return strings.HasSuffix(email, "@"+e.domain)
+    }, opts)
+}
+```
+
+### EvalOptions
+
+Options passed by `Suite.Validate` into each expectation's `Evaluate` method.
+
+- `SampleCap int` - maximum failing values stored in `Result.SampleValues`
 
 ## Report and Result
 

@@ -2,10 +2,10 @@ package gx
 
 import "fmt"
 
-// evalColumn runs a typed predicate over every row, recording failures. It is
+// EvalColumn runs a typed predicate over every row, recording failures. It is
 // the shared per-row loop for column-value checks: the only value-boxing is the
 // capped SampleValues; FailedIndices is complete.
-func evalColumn[T, V any](name, column string, rows []T,
+func EvalColumn[T, V any](name, column string, rows []T,
 	get func(T) V, pred func(V) bool, opts EvalOptions) Result {
 
 	res := Result{Name: name, Column: column, Total: len(rows), Success: true}
@@ -25,6 +25,11 @@ func evalColumn[T, V any](name, column string, rows []T,
 		res.FailedPercent = float64(res.FailedCount) / float64(res.Total) * 100
 	}
 	return res
+}
+
+func evalColumn[T, V any](name, column string, rows []T,
+	get func(T) V, pred func(V) bool, opts EvalOptions) Result {
+	return EvalColumn(name, column, rows, get, pred, opts)
 }
 
 // colExpectation adapts a typed accessor + predicate to the Expectation interface.
