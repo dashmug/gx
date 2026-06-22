@@ -18,18 +18,21 @@ Requires **Go 1.23+**.
 
 ## Project Layout
 
-```
+````
 gx/
 ├── report.go        Result, Report, ValidationError — the data model
 ├── suite.go         Suite[T], NewSuite, Validate, EvalOptions, Expectation interface
-├── expectation.go   Internal expectation engine + Row/RowCount builders
-├── column.go        Ordered, Str, Comparable, Field column builders
+├── expectation.go   Core eval helpers: EvalColumn, colExpectation, newCol, inSet, notInSet
+├── ordered.go       OrderedColumn[T, V] and Ordered builder
+├── string.go        StringColumn[T] and Str builder
+├── comparable.go    ComparableColumn[T, V], FieldColumn[T, V] and their builders
+├── unique.go        uniqueExpectation (Unique checks)
+├── row.go           Row, RowCount, RowCountBetween, RowCountEqual
 ├── render.go        String() methods for Result and Report
 ├── doc.go           Package-level documentation
-├── *_test.go        Tests (one file per source area)
+├── *_test.go        Tests (one file per source file)
 ├── example_test.go  Runnable Example() (package gx_test)
 └── gxtest/          Test-helper sub-package (Check, Require)
-```
 
 Source and tests live flat in the package root. The only sub-package is
 `gxtest/`.
@@ -69,7 +72,7 @@ Most contributions add a check. There are two ways, depending on the check.
 ### A new column method (most common)
 
 If the check operates on a single column value, add a method to the relevant
-column type in `column.go`. It returns an `Expectation[T]` built via the shared
+column type in the relevant file (`ordered.go`, `string.go`, or `comparable.go`). It returns an `Expectation[T]` built via the shared
 `newCol` / `inSet` helpers — never construct a `Result` by hand.
 
 ```go
@@ -78,7 +81,7 @@ func (c OrderedColumn[T, V]) Positive() Expectation[T] {
     var zero V
     return newCol(c.name+" positive", c.name, c.get, func(v V) bool { return v > zero })
 }
-```
+````
 
 The first `newCol` argument becomes `Result.Name` — make it read naturally in a
 report (`"age positive"`, not `"PositiveCheck"`).
@@ -86,7 +89,8 @@ report (`"age positive"`, not `"PositiveCheck"`).
 ### A custom `Expectation`
 
 For checks the column helpers can't express (aggregates, cross-row logic),
-implement the interface directly in `expectation.go`:
+implement the `Expectation[T]` interface directly in a new file or in `row.go`
+if row-level, `unique.go` if aggregate:
 
 ```go
 type Expectation[T any] interface {
@@ -117,8 +121,9 @@ type Expectation[T any] interface {
   frameworks.
 - **Inline, direct assertions.** No table-driven tests, no subtests. Keep each
   test focused on one behavior.
-- Test files mirror source files (`column.go` → `column_test.go`, etc.). Tests
-  are `package gx`; `gxtest` external tests are `package gxtest_test`.
+- Test files mirror source files (`ordered.go` → `ordered_test.go`, `row.go` →
+  `row_test.go`, etc.). Tests are `package gx`; `gxtest` external tests are
+  `package gxtest_test`.
 
 ### What to assert
 

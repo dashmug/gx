@@ -134,16 +134,20 @@ func (c OrderedColumn[T, V]) Between(lo, hi V) Expectation[T] {
 
 ## Important Files
 
-| File               | Purpose                                                                                                                                 |
-| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `report.go`        | `Result`, `Report`, `ValidationError` types                                                                                             |
-| `suite.go`         | `Suite[T]`, `NewSuite`, `WithSampleCap`, `Validate`, `DefaultSampleCap`, `EvalOptions`                                                  |
-| `expectation.go`   | `Expectation[T]` interface; `evalColumn`, `newCol`, `inSet`, `uniqueExpectation`, `Row`, `RowCount`, `RowCountBetween`, `RowCountEqual` |
-| `column.go`        | `OrderedColumn`, `StringColumn`, `ComparableColumn`, `FieldColumn` and their builder functions                                          |
-| `render.go`        | `String()` methods on `Result` and `Report`; `truncList` helper                                                                         |
-| `doc.go`           | Package-level godoc with usage example                                                                                                  |
-| `example_test.go`  | Runnable `Example()` (package `gx_test`) — verifies output                                                                              |
-| `gxtest/gxtest.go` | `TestingT` interface, `Check[T]`, `Require[T]`                                                                                          |
+| File               | Purpose                                                                                                                                                  |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `report.go`        | `Result`, `Report`, `ValidationError` types                                                                                                              |
+| `suite.go`         | `Suite[T]`, `NewSuite`, `WithSampleCap`, `Validate`, `DefaultSampleCap`, `EvalOptions`                                                                   |
+| `expectation.go`   | `EvalColumn` (exported helper); `evalColumn`, `colExpectation`, `newCol`, `inSet`, `notInSet`                                                            |
+| `ordered.go`       | `OrderedColumn[T, V]` and its builder `Ordered`                                                                                                          |
+| `string.go`        | `StringColumn[T]` and its builder `Str`                                                                                                                  |
+| `comparable.go`    | `ComparableColumn[T, V]`, `FieldColumn[T, V]` and their builders `Comparable`, `Field`                                                                   |
+| `unique.go`        | `uniqueExpectation`; `unique` internal constructor                                                                                                       |
+| `row.go`           | `rowExpectation`, `rowCountExpectation`, `rowCountBetweenExpectation`, `rowCountEqualExpectation`; `Row`, `RowCount`, `RowCountBetween`, `RowCountEqual` |
+| `render.go`        | `String()` methods on `Result` and `Report`; `truncList` helper                                                                                          |
+| `doc.go`           | Package-level godoc with usage example                                                                                                                   |
+| `example_test.go`  | Runnable `Example()` (package `gx_test`) — verifies output                                                                                               |
+| `gxtest/gxtest.go` | `TestingT` interface, `Check[T]`, `Require[T]`                                                                                                           |
 
 ## Runtime/Tooling Preferences
 
@@ -158,8 +162,8 @@ func (c OrderedColumn[T, V]) Between(lo, hi V) Expectation[T] {
 **Framework**: standard `testing` package only — no testify, no gomock.
 
 **Test file locations**: flat alongside source (`suite_test.go`,
-`column_test.go`, etc.); `gxtest/gxtest_test.go` is `package gxtest_test`
-(external test package).
+`ordered_test.go`, `comparable_test.go`, etc.); `gxtest/gxtest_test.go` is
+`package gxtest_test` (external test package).
 
 **Pattern**: inline, direct assertion — no table-driven tests, no subtests.
 

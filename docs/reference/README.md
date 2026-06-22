@@ -35,7 +35,7 @@ report.
 report := suite.Validate(users)
 ```
 
-### Suite[T].WithSampleCap(cap int) *Suite[T]
+### Suite[T].WithSampleCap(cap int) \*Suite[T]
 
 Sets the maximum sample values retained per result and returns the same suite
 for chaining.
@@ -172,16 +172,15 @@ Result semantics:
 - `FailedCount` - rows where `pred(get(row))` returned `false`
 - `FailedPercent` - `FailedCount / Total * 100` when `Total > 0`, otherwise `0`
 - `FailedIndices` - complete list of failing row indices (not capped)
-- `SampleValues` - failing values boxed as `[]any`, capped at
-  `opts.SampleCap` (first failures retained)
+- `SampleValues` - failing values boxed as `[]any`, capped at `opts.SampleCap`
+  (first failures retained)
 - `Success` - `true` when `FailedCount == 0`
-- Empty input (`len(rows) == 0`) passes vacuously: `Success` is `true`,
-  `Total` and `FailedCount` are `0`, and `FailedIndices` / `SampleValues` are
-  empty
+- Empty input (`len(rows) == 0`) passes vacuously: `Success` is `true`, `Total`
+  and `FailedCount` are `0`, and `FailedIndices` / `SampleValues` are empty
 
 When a suite runs, `opts.SampleCap` comes from `Suite.WithSampleCap` (default
-`DefaultSampleCap`, currently 20). Call `EvalColumn` from your type's
-`Evaluate` method and pass through the `opts` argument unchanged.
+`DefaultSampleCap`, currently 20). Call `EvalColumn` from your type's `Evaluate`
+method and pass through the `opts` argument unchanged.
 
 ```go
 type trustedDomainExpectation[T any] struct {
