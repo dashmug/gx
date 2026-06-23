@@ -38,16 +38,21 @@ func Row[T any](name string, pred func(T) bool) Expectation[T] {
 // rowCountExpectation checks the number of rows. Per-row Result fields are left
 // empty; Total stays 0 because the check is table-level, not per-row.
 type rowCountExpectation[T any] struct {
-	label string
-	check func(n int) bool
+	label     string
+	check     func(n int) bool
+	reportGot bool
 }
 
 func (e rowCountExpectation[T]) Name() string { return e.label }
 
 func (e rowCountExpectation[T]) Evaluate(rows []T, _ EvalOptions) Result {
 	n := len(rows)
+	name := e.label
+	if e.reportGot {
+		name = fmt.Sprintf("%s: got %d", e.label, n)
+	}
 	return Result{
-		Name:    e.label,
+		Name:    name,
 		Total:   0,
 		Success: e.check(n),
 	}
@@ -101,4 +106,40 @@ func (e rowCountEqualExpectation[T]) Evaluate(rows []T, _ EvalOptions) Result {
 // RowCountEqual asserts len(rows) == want.
 func RowCountEqual[T any](want int) Expectation[T] {
 	return rowCountEqualExpectation[T]{want: want}
+}
+
+// RowCountGreaterThan asserts len(rows) > bound.
+func RowCountGreaterThan[T any](bound int) Expectation[T] {
+	return rowCountExpectation[T]{
+		label:     fmt.Sprintf("row count > %d", bound),
+		check:     func(n int) bool { return n > bound },
+		reportGot: true,
+	}
+}
+
+// RowCountGreaterOrEqual asserts len(rows) >= bound.
+func RowCountGreaterOrEqual[T any](bound int) Expectation[T] {
+	return rowCountExpectation[T]{
+		label:     fmt.Sprintf("row count >= %d", bound),
+		check:     func(n int) bool { return n >= bound },
+		reportGot: true,
+	}
+}
+
+// RowCountLessThan asserts len(rows) < bound.
+func RowCountLessThan[T any](bound int) Expectation[T] {
+	return rowCountExpectation[T]{
+		label:     fmt.Sprintf("row count < %d", bound),
+		check:     func(n int) bool { return n < bound },
+		reportGot: true,
+	}
+}
+
+// RowCountLessOrEqual asserts len(rows) <= bound.
+func RowCountLessOrEqual[T any](bound int) Expectation[T] {
+	return rowCountExpectation[T]{
+		label:     fmt.Sprintf("row count <= %d", bound),
+		check:     func(n int) bool { return n <= bound },
+		reportGot: true,
+	}
 }

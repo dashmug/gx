@@ -81,6 +81,15 @@ Creates a column accessor for any type (escape hatch for complex types).
 tagsCol := gx.Field("tags", func(p Post) []string { return p.Tags })
 ```
 
+### Numeric[T any, V Number](name string, get func(T) V) NumericColumn[T, V]
+
+Creates a column accessor for numeric aggregate expectations over signed and
+unsigned integers, plus floating-point values.
+
+```go
+amountCol := gx.Numeric("amount", func(o Order) float64 { return o.Amount })
+```
+
 ### Row[T any](name string, pred func(T) bool) Expectation[T]
 
 Creates a row-level expectation for cross-field validations.
@@ -134,10 +143,60 @@ All expectation types and their methods.
 
 - `Satisfy(check string, pred func(V) bool) Expectation[T]` - Custom predicate
 
+### NumericColumn[T, V] Methods
+
+- `AverageBetween(lo, hi float64) Expectation[T]` - Average in range (inclusive)
+- `MedianBetween(lo, hi float64) Expectation[T]` - Median in range (inclusive)
+- `StdDevBetween(lo, hi float64) Expectation[T]` - Population standard deviation
+  in range (inclusive)
+- `SatisfyAggregate(check string, pred func(NumericStats) bool) Expectation[T]` -
+  Custom aggregate predicate
+
+### NumericStats
+
+Statistics computed for numeric aggregate expectations:
+
+- `Count int` - Number of extracted values
+- `Sum float64` - Sum of values
+- `Average float64` - Arithmetic mean
+- `Median float64` - Median (even count: average of middle pair)
+- `StdDevPopulation float64` - Population standard deviation
+- `StdDevSample float64` - Sample standard deviation (`n-1` denominator when
+  `n > 1`)
+
+Aggregate expectations set `Result.Column` to the numeric label and leave
+per-row fields (`Total`, `FailedCount`, `FailedIndices`, `SampleValues`) at zero
+values, matching table-level `RowCount*` semantics. `Success` carries the
+verdict.
+
+After evaluation:
+
+- `AverageBetween`, `MedianBetween`, and `StdDevBetween` append the observed
+  statistic to `Result.Name` (for example `amount average in [10,100]: got 55`).
+- `SatisfyAggregate` uses `"<column>: <check>"` and does not append a `got`
+  value.
+- Any extracted `NaN` or infinite float fails with `Success=false`, `Err=nil`,
+  and `Name` containing `got non-finite value`.
+- Empty or nil input passes vacuously; `SatisfyAggregate` predicates are not
+  called on empty input.
+
 ### Table-Level Expectations
 
-Functions for dataset-level validations:
+Functions that validate the dataset as a whole. `RowCount*` helpers check
+`len(rows)` only. They use table-level `Result` shape: `Column` is `""`, `Total`
+is `0`, and per-row fields stay empty. `RowCountBetween`, `RowCountEqual`, and
+the threshold helpers append the observed count to `Result.Name` (for example
+`row count > 2: got 3`). Custom `RowCount(name, pred)` keeps the caller-provided
+name.
 
+- `RowCountGreaterThan[T any](bound int) Expectation[T]` - Row count greater
+  than bound
+- `RowCountGreaterOrEqual[T any](bound int) Expectation[T]` - Row count greater
+  than or equal to bound
+- `RowCountLessThan[T any](bound int) Expectation[T]` - Row count less than
+  bound
+- `RowCountLessOrEqual[T any](bound int) Expectation[T]` - Row count less than
+  or equal to bound
 - `RowCount[T any](name string, pred func(int) bool) Expectation[T]` - Custom
   row count predicate
 - `RowCountBetween[T any](lo, hi int) Expectation[T]` - Row count between bounds
@@ -241,15 +300,30 @@ Details about a single expectation's validation outcome.
 
 #### Fields
 
-- `Name string` - Expectation name
-- `Column string` - Column label (empty for row/table-level)
+- `Name string` - Human-readable label; table-level checks may append `: got …`
+- `Column string` - Accessor label for per-row column and Numeric aggregate
+  checks; empty for `gx.Row` and `RowCount*`
 - `Success bool` - Whether the expectation passed
-- `Total int` - Total rows evaluated
-- `FailedCount int` - Number of rows that failed
-- `FailedPercent float64` - Percentage of rows that failed
-- `SampleValues []any` - Sample of failing values (capped)
-- `FailedIndices []int` - Indices of all failing rows (complete)
-- `Err error` - Error during evaluation (if any)
+- `Total int` - `len(rows)` for per-row checks; `0` for table-level checks
+- `FailedCount int` - Number of rows that failed (per-row checks only)
+- `FailedPercent float64` - `FailedCount/Total*100`; `0` when `Total==0`
+- `SampleValues []any` - Sample of failing values (capped; per-row checks only)
+- `FailedIndices []int` - Indices of all failing rows (complete; per-row checks
+  only)
+- `Err error` - Evaluation error from custom expectations; built-in validation
+  failures leave this `nil`
+
+#### Semantics by expectation family
+
+| Family                                  | `Column`       | `Total`     | Per-row fields       | `Name` after `Evaluate`                                                                                                        |
+| --------------------------------------- | -------------- | ----------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Per-row column (`Ordered`, `Str`, …)    | accessor label | `len(rows)` | populated on failure | stable label (for example `age between [0,120]`)                                                                               |
+| `gx.Row`                                | `""`           | `len(rows)` | populated on failure | stable caller-provided name                                                                                                    |
+| `RowCount*` threshold / between / equal | `""`           | `0`         | empty                | appends `: got <n>` (custom `RowCount` keeps caller name)                                                                      |
+| `Numeric` aggregates                    | accessor label | `0`         | empty                | range helpers append `: got <stat>`; `SatisfyAggregate` uses `<column>: <check>`; non-finite floats use `got non-finite value` |
+
+`Result.String()` omits row-count details for table-level failures when
+`FailedCount == 0`.
 
 ## Testing Integration
 

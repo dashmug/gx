@@ -276,10 +276,122 @@ gx.Row("ship date after order date", func(o Order) bool {
 
 Use when validation depends on relationships between fields.
 
+## Numeric Column Aggregate Expectations
+
+For integer and floating-point fields. Accessed through `gx.Numeric()`. Unlike
+`Ordered`, these validate dataset-level statistics rather than individual rows.
+They share table-level `Result` shape with `RowCount*`: `Total` is `0`, per-row
+fields stay empty, and `Success` carries the verdict — but `Result.Column` is
+the numeric accessor label.
+
+After evaluation, `AverageBetween`, `MedianBetween`, and `StdDevBetween` append
+the observed statistic to `Result.Name` (for example
+`amount average in [10,100]: got 55`). `SatisfyAggregate` uses
+`"<column>: <check>"` and does not append a `got` value. Any extracted `NaN` or
+infinite float causes built-in aggregates to fail with `Success=false`,
+`Err=nil`, and `Name` containing `got non-finite value`. Empty or nil input
+passes vacuously; built-in aggregates do not call `SatisfyAggregate` predicates
+on empty input.
+
+### AverageBetween
+
+Asserts that `lo <= average <= hi` (inclusive) over extracted numeric values.
+
+```go
+gx.Numeric("amount", func(o Order) float64 { return o.Amount }).AverageBetween(10, 100)
+```
+
+Use for batch-level mean checks such as average order value.
+
+### MedianBetween
+
+Asserts that `lo <= median <= hi` (inclusive). Even-length datasets use the
+average of the two middle values.
+
+```go
+gx.Numeric("amount", func(o Order) float64 { return o.Amount }).MedianBetween(10, 100)
+```
+
+Use when the typical value matters more than the mean.
+
+### StdDevBetween
+
+Asserts that population standard deviation is in `[lo, hi]` (inclusive).
+
+```go
+gx.Numeric("amount", func(o Order) float64 { return o.Amount }).StdDevBetween(0, 25)
+```
+
+Use to bound spread. `NumericStats.StdDevSample` is available only in
+`SatisfyAggregate` callbacks.
+
+### SatisfyAggregate
+
+Asserts that computed statistics match a custom predicate.
+
+```go
+gx.Numeric("amount", func(o Order) float64 { return o.Amount }).SatisfyAggregate(
+    "coefficient of variation <= 0.25",
+    func(s gx.NumericStats) bool {
+        return s.Average == 0 || s.StdDevPopulation/s.Average <= 0.25
+    },
+)
+```
+
+Use for aggregate logic that built-in range checks cannot express. Empty or nil
+input passes vacuously and does not call the predicate.
+
 ## Table-Level Expectations
 
-Validations about the dataset as a whole. Accessed through `gx.RowCount*`
-functions.
+Validations about the dataset as a whole. `RowCount*` helpers check `len(rows)`
+only. They use table-level `Result` shape: `Column` is `""`, `Total` is `0`, and
+per-row fields stay empty. `RowCountBetween`, `RowCountEqual`, and the threshold
+helpers append the observed count to `Result.Name` (for example
+`row count in [1,1000]: got 42`). Custom `RowCount(name, pred)` keeps the
+caller-provided name.
+
+`gx.Numeric()` aggregate expectations (see above) are also table-level but set
+`Result.Column` to the accessor label.
+
+### RowCountGreaterThan
+
+Asserts that `len(rows) > bound`.
+
+```go
+gx.RowCountGreaterThan[User](0)
+```
+
+Use to require a non-empty dataset.
+
+### RowCountGreaterOrEqual
+
+Asserts that `len(rows) >= bound`.
+
+```go
+gx.RowCountGreaterOrEqual[User](1)
+```
+
+Use for minimum batch sizes.
+
+### RowCountLessThan
+
+Asserts that `len(rows) < bound`.
+
+```go
+gx.RowCountLessThan[Batch](10000)
+```
+
+Use for maximum batch sizes (exclusive).
+
+### RowCountLessOrEqual
+
+Asserts that `len(rows) <= bound`.
+
+```go
+gx.RowCountLessOrEqual[Batch](1000)
+```
+
+Use for maximum batch sizes (inclusive).
 
 ### RowCountBetween
 

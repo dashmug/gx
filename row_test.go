@@ -120,3 +120,103 @@ func TestRowCountCustomPredicatePassesOnNilRows(t *testing.T) {
 		t.Fatalf("expected RowCount predicate over nil rows to pass; report: %v", rep.Results[0])
 	}
 }
+
+func assertTableLevelResult(t *testing.T, res Result, wantName string, wantSuccess bool) {
+	t.Helper()
+	if res.Success != wantSuccess {
+		t.Fatalf("Success=%v want %v", res.Success, wantSuccess)
+	}
+	if res.Name != wantName {
+		t.Fatalf("Name=%q want %q", res.Name, wantName)
+	}
+	if res.Column != "" {
+		t.Fatalf("Column=%q want empty", res.Column)
+	}
+	if res.Total != 0 {
+		t.Fatalf("Total=%d want 0 for table-level row count", res.Total)
+	}
+	if res.FailedCount != 0 {
+		t.Fatalf("FailedCount=%d want 0 for table-level row count", res.FailedCount)
+	}
+	if len(res.FailedIndices) != 0 {
+		t.Fatalf("FailedIndices=%v want empty", res.FailedIndices)
+	}
+	if len(res.SampleValues) != 0 {
+		t.Fatalf("SampleValues=%v want empty", res.SampleValues)
+	}
+}
+
+func TestRowCountThresholdHelpers(t *testing.T) {
+	makeRows := func(n int) []int {
+		if n == 0 {
+			return nil
+		}
+		return make([]int, n)
+	}
+
+	t.Run("RowCountGreaterThan", func(t *testing.T) {
+		exp := RowCountGreaterThan[int](2)
+		if exp.Name() != "row count > 2" {
+			t.Fatalf("Name()=%q want %q", exp.Name(), "row count > 2")
+		}
+		pass := NewSuite[int](exp).Validate(makeRows(3)).Results[0]
+		assertTableLevelResult(t, pass, "row count > 2: got 3", true)
+		fail := NewSuite[int](exp).Validate(makeRows(2)).Results[0]
+		assertTableLevelResult(t, fail, "row count > 2: got 2", false)
+	})
+
+	t.Run("RowCountGreaterOrEqual", func(t *testing.T) {
+		exp := RowCountGreaterOrEqual[int](2)
+		if exp.Name() != "row count >= 2" {
+			t.Fatalf("Name()=%q want %q", exp.Name(), "row count >= 2")
+		}
+		pass := NewSuite[int](exp).Validate(makeRows(2)).Results[0]
+		assertTableLevelResult(t, pass, "row count >= 2: got 2", true)
+		fail := NewSuite[int](exp).Validate(makeRows(1)).Results[0]
+		assertTableLevelResult(t, fail, "row count >= 2: got 1", false)
+	})
+
+	t.Run("RowCountLessThan", func(t *testing.T) {
+		exp := RowCountLessThan[int](2)
+		if exp.Name() != "row count < 2" {
+			t.Fatalf("Name()=%q want %q", exp.Name(), "row count < 2")
+		}
+		pass := NewSuite[int](exp).Validate(makeRows(1)).Results[0]
+		assertTableLevelResult(t, pass, "row count < 2: got 1", true)
+		fail := NewSuite[int](exp).Validate(makeRows(2)).Results[0]
+		assertTableLevelResult(t, fail, "row count < 2: got 2", false)
+	})
+
+	t.Run("RowCountLessOrEqual", func(t *testing.T) {
+		exp := RowCountLessOrEqual[int](2)
+		if exp.Name() != "row count <= 2" {
+			t.Fatalf("Name()=%q want %q", exp.Name(), "row count <= 2")
+		}
+		pass := NewSuite[int](exp).Validate(makeRows(2)).Results[0]
+		assertTableLevelResult(t, pass, "row count <= 2: got 2", true)
+		fail := NewSuite[int](exp).Validate(makeRows(3)).Results[0]
+		assertTableLevelResult(t, fail, "row count <= 2: got 3", false)
+	})
+}
+
+func TestRowCountGreaterThanNonEmptyGuard(t *testing.T) {
+	exp := RowCountGreaterThan[int](0)
+	if exp.Name() != "row count > 0" {
+		t.Fatalf("Name()=%q want %q", exp.Name(), "row count > 0")
+	}
+
+	t.Run("nil rows", func(t *testing.T) {
+		res := NewSuite[int](exp).Validate(nil).Results[0]
+		assertTableLevelResult(t, res, "row count > 0: got 0", false)
+	})
+
+	t.Run("empty slice", func(t *testing.T) {
+		res := NewSuite[int](exp).Validate([]int{}).Results[0]
+		assertTableLevelResult(t, res, "row count > 0: got 0", false)
+	})
+
+	t.Run("non-empty slice", func(t *testing.T) {
+		res := NewSuite[int](exp).Validate([]int{1}).Results[0]
+		assertTableLevelResult(t, res, "row count > 0: got 1", true)
+	})
+}

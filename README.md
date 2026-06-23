@@ -175,6 +175,38 @@ col.Satisfy("terminal", isDone) // custom predicate func(V) bool
 col.Unique()                    // every value distinct
 ```
 
+### `Numeric` — integers, floats (aggregates)
+
+For dataset-level statistics over a numeric column:
+
+```go
+col := gx.Numeric("amount", func(o Order) float64 { return o.Amount })
+
+col.AverageBetween(10, 100)     // lo <= average <= hi
+col.MedianBetween(10, 100)      // lo <= median <= hi
+col.StdDevBetween(0, 25)        // population std dev in [lo, hi]
+col.SatisfyAggregate("CV <= 0.25", func(s gx.NumericStats) bool {
+    return s.Average == 0 || s.StdDevPopulation/s.Average <= 0.25
+})
+```
+
+Unlike `Ordered`, `Numeric` checks dataset-level statistics, not individual
+rows. Results use table-level reporting: `Result.Column` is the accessor label,
+`Total` is `0`, and per-row fields (`FailedCount`, `FailedIndices`,
+`SampleValues`) stay empty — `Success` carries the pass/fail verdict.
+
+After evaluation, `AverageBetween`, `MedianBetween`, and `StdDevBetween` append
+the observed statistic to `Result.Name` (for example
+`amount average in [10,100]: got 55`). `SatisfyAggregate` uses
+`"<column>: <check>"` and does not append a `got` value. If any extracted
+`float32`/`float64` is `NaN` or infinite, built-in aggregates fail with
+`Success=false`, `Err=nil`, and a `Name` containing `got non-finite value`.
+
+Empty or nil input passes vacuously for built-in aggregates and does not call
+`SatisfyAggregate` predicates; use `RowCountGreaterThan[T](0)` when you need
+non-empty data. `StdDevBetween` uses population standard deviation;
+`NumericStats.StdDevSample` is available in `SatisfyAggregate` callbacks.
+
 ### `Field` — any type (escape hatch)
 
 For types that are neither ordered nor comparable (slices, maps, structs):
@@ -199,14 +231,25 @@ gx.Row("ship date after order date", func(o Order) bool {
 ### Row-count rules — `RowCount`
 
 Assertions about the _number_ of rows rather than their contents.
-`RowCount(name, pred)` is the table-level escape hatch for custom rules;
-`RowCountBetween` and `RowCountEqual` cover the common cases:
+`RowCountGreaterThan` / `RowCountLessThan` and friends cover common thresholds;
+`RowCountBetween` and `RowCountEqual` cover ranges and exact counts;
+`RowCount(name, pred)` is the escape hatch for custom rules:
 
 ```go
-gx.RowCount[User]("at least one", func(n int) bool { return n > 0 })
-gx.RowCountBetween[User](1, 1000)   // 1 <= len(rows) <= 1000
-gx.RowCountEqual[User](42)          // len(rows) == 42
+gx.RowCountGreaterThan[User](0)      // len(rows) > bound
+gx.RowCountGreaterOrEqual[User](1)   // len(rows) >= bound
+gx.RowCountLessThan[User](10000)     // len(rows) < bound
+gx.RowCountLessOrEqual[User](1000)   // len(rows) <= bound
+gx.RowCountBetween[User](1, 1000)    // 1 <= len(rows) <= 1000
+gx.RowCountEqual[User](42)           // len(rows) == 42
+gx.RowCount[User]("even batch", func(n int) bool { return n%2 == 0 })
 ```
+
+`RowCount*` checks are also table-level: `Column` is `""`, `Total` is `0`, and
+per-row fields stay empty. `RowCountBetween`, `RowCountEqual`, and the threshold
+helpers (`RowCountGreaterThan`, …) append the observed count to `Result.Name`
+(for example `row count > 2: got 3`). Custom `RowCount(name, pred)` keeps the
+caller-provided `Name` unchanged.
 
 ## Working with Results
 
@@ -245,10 +288,10 @@ report.Results        // []Result, all of them, in declaration order
 
 ```go
 type Result struct {
-    Name          string    // e.g. "age between [0,120]"
-    Column        string    // column label; "" for row/table-level checks
+    Name          string    // human-readable label; table-level checks may append ": got …"
+    Column        string    // accessor label for per-row column and Numeric aggregate checks; "" for gx.Row and RowCount*
     Success       bool
-    Total         int       // rows evaluated
+    Total         int       // len(rows) for per-row checks; 0 for table-level checks
     FailedCount   int
     FailedPercent float64   // FailedCount/Total*100; 0 when Total==0
     SampleValues  []any     // capped sample of offending values
@@ -257,9 +300,15 @@ type Result struct {
 }
 ```
 
-`FailedIndices` is **never truncated** — it always lists every failing row, so
-you can act on all of them. `SampleValues` _is_ capped (default 20) for readable
-reports.
+Per-row column and `gx.Row` checks populate `Total`, `FailedCount`,
+`FailedIndices`, and `SampleValues`. Table-level `RowCount*` and `Numeric`
+aggregate checks leave those fields at zero — inspect `Success` and `Name`
+instead. `Result.String()` renders table-level failures without row counts when
+`FailedCount == 0`.
+
+`FailedIndices` is **never truncated** in the field — it always lists every
+failing row — but `Result.String()` may truncate its displayed samples/indices
+for readability. `SampleValues` _is_ capped (default 20) for readable reports.
 
 ### Human-readable output
 
@@ -343,8 +392,13 @@ Set `Result.Err` if evaluation itself fails — the suite normalizes a non-nil
 
 ## Behavior Notes
 
-- **Empty input passes vacuously.** A column check over zero rows succeeds
-  (`Total == 0`).
+- **Empty input passes vacuously.** A per-row column check over zero rows
+  succeeds (`Total == 0`). Built-in numeric aggregates and `SatisfyAggregate`
+  also pass on empty or nil input; compose `RowCountGreaterThan[T](0)` when
+  non-empty data is required.
+- **Non-finite floats fail aggregates.** If a `Numeric` accessor returns `NaN`
+  or ±`Inf`, built-in aggregate expectations fail as data (`Success=false`,
+  `Err=nil`) with `Name` containing `got non-finite value`.
 - **`Validate` never panics** and never returns an error directly — gate via
   `Report.Err()`.
 - **`Unique`**: the first occurrence of a value passes; every later duplicate

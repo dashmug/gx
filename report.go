@@ -6,11 +6,17 @@ import (
 )
 
 // Result is the outcome of one expectation over a single Validate run.
+//
+// Per-row column and row checks set Total to len(rows) and populate
+// FailedCount, FailedIndices, and SampleValues on failure. Table-level checks
+// (RowCount* and Numeric aggregates) leave those per-row fields at zero;
+// Success carries the verdict. Numeric aggregates still set Column to the
+// accessor label; RowCount* and gx.Row use Column "".
 type Result struct {
-	Name          string // e.g. "age between [0,120]"
-	Column        string // column label; "" for row-level and table-level checks
+	Name          string // human-readable label; table-level checks may append ": got …"
+	Column        string // accessor label for per-row column checks and Numeric aggregates; "" for gx.Row and RowCount*
 	Success       bool
-	Total         int // rows evaluated
+	Total         int // len(rows) for per-row checks; 0 for table-level checks
 	FailedCount   int
 	FailedPercent float64 // FailedCount/Total*100; 0 when Total==0
 	SampleValues  []any   // capped sample of offending values
