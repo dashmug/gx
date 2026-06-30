@@ -38,10 +38,22 @@ report := suite.Validate(users)
 ### Suite[T].WithSampleCap(cap int) \*Suite[T]
 
 Sets the maximum sample values retained per result and returns the same suite
-for chaining.
+for chaining. Zero means no samples are collected. Negative values are rejected
+when `Validate` runs.
 
 ```go
 suite := gx.NewSuite[User](/* expectations */).WithSampleCap(5)
+```
+
+### Suite[T].WithFailedIndicesCap(cap int) \*Suite[T]
+
+Sets the maximum failing row indices retained per result and returns the same
+suite for chaining. Default is `DefaultFailedIndicesCap` (100). Zero means
+unlimited. `FailedCount` and `FailedPercent` remain complete when indices are
+capped. Negative values are rejected when `Validate` runs.
+
+```go
+suite := gx.NewSuite[User](/* expectations */).WithFailedIndicesCap(100)
 ```
 
 ## Column Builders
@@ -112,8 +124,11 @@ All expectation types and their methods.
 - `GreaterOrEqual(bound V) Expectation[T]` - Value greater than or equal to
   bound
 - `LessOrEqual(bound V) Expectation[T]` - Value less than or equal to bound
-- `In(vals ...V) Expectation[T]` - Value is one of the listed values
-- `NotIn(vals ...V) Expectation[T]` - Value is not one of the listed values
+- `In(vals ...V) Expectation[T]` - Value is one of the listed values. An empty
+  list fails every row; gxsql rejects empty `In` at configuration time.
+- `NotIn(vals ...V) Expectation[T]` - Value is not one of the listed values. An
+  empty list passes every row vacuously; gxsql rejects empty `NotIn` at
+  configuration time.
 - `NotZero() Expectation[T]` - Value is not the zero value
 - `Zero() Expectation[T]` - Value is the zero value
 - `Satisfy(check string, pred func(V) bool) Expectation[T]` - Custom predicate
@@ -132,8 +147,11 @@ All expectation types and their methods.
 
 ### ComparableColumn[T, V] Methods
 
-- `In(vals ...V) Expectation[T]` - Value is one of the listed values
-- `NotIn(vals ...V) Expectation[T]` - Value is not one of the listed values
+- `In(vals ...V) Expectation[T]` - Value is one of the listed values. An empty
+  list fails every row; gxsql rejects empty `In` at configuration time.
+- `NotIn(vals ...V) Expectation[T]` - Value is not one of the listed values. An
+  empty list passes every row vacuously; gxsql rejects empty `NotIn` at
+  configuration time.
 - `NotZero() Expectation[T]` - Value is not the zero value
 - `Zero() Expectation[T]` - Value is the zero value
 - `Satisfy(check string, pred func(V) bool) Expectation[T]` - Custom predicate
@@ -263,6 +281,9 @@ func (e trustedDomainExpectation[T]) Evaluate(rows []T, opts gx.EvalOptions) gx.
 Options passed by `Suite.Validate` into each expectation's `Evaluate` method.
 
 - `SampleCap int` - maximum failing values stored in `Result.SampleValues`
+- `FailedIndicesCap int` - maximum failing row indices stored in
+  `Result.FailedIndices`; default `DefaultFailedIndicesCap` (100); zero means
+  unlimited
 
 ## Report and Result
 
@@ -308,8 +329,8 @@ Details about a single expectation's validation outcome.
 - `FailedCount int` - Number of rows that failed (per-row checks only)
 - `FailedPercent float64` - `FailedCount/Total*100`; `0` when `Total==0`
 - `SampleValues []any` - Sample of failing values (capped; per-row checks only)
-- `FailedIndices []int` - Indices of all failing rows (complete; per-row checks
-  only)
+- `FailedIndices []int` - Indices of failing rows (capped when
+  `WithFailedIndicesCap` is set; per-row checks only)
 - `Err error` - Evaluation error from custom expectations; built-in validation
   failures leave this `nil`
 
@@ -322,7 +343,8 @@ Details about a single expectation's validation outcome.
 | `RowCount*` threshold / between / equal | `""`           | `0`         | empty                | appends `: got <n>` (custom `RowCount` keeps caller name)                                                                      |
 | `Numeric` aggregates                    | accessor label | `0`         | empty                | range helpers append `: got <stat>`; `SatisfyAggregate` uses `<column>: <check>`; non-finite floats use `got non-finite value` |
 
-`Result.String()` omits row-count details for table-level failures when
+`Result.String()` omits the `(N rows)` suffix for successful table-level checks
+(`Total == 0`) and omits row-count details for table-level failures when
 `FailedCount == 0`.
 
 ## Testing Integration

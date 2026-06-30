@@ -12,7 +12,10 @@ const maxDisplay = 10
 // String renders one result as a single line, prefixed ✓ or ✗.
 func (r Result) String() string {
 	if r.Success {
-		return fmt.Sprintf("✓ %s (%d rows)", r.Name, r.Total)
+		if r.Total > 0 {
+			return fmt.Sprintf("✓ %s (%d rows)", r.Name, r.Total)
+		}
+		return fmt.Sprintf("✓ %s", r.Name)
 	}
 	if r.FailedCount == 0 { // table-level style: Success carries the verdict
 		return fmt.Sprintf("✗ %s", r.Name)

@@ -14,12 +14,15 @@ func Comparable[T any, V comparable](name string, get func(T) V) ComparableColum
 	return ComparableColumn[T, V]{name: name, get: get}
 }
 
-// In asserts the value is one of vals.
+// In asserts the value is one of vals. An empty vals list fails every row
+// (nothing is in the empty set). gxsql rejects empty In at configuration time.
 func (c ComparableColumn[T, V]) In(vals ...V) Expectation[T] {
 	return inSet(fmt.Sprintf("%s in %v", c.name, vals), c.name, c.get, vals)
 }
 
-// NotIn asserts the value is not one of vals.
+// NotIn asserts the value is not one of vals. An empty vals list passes every
+// row vacuously (no forbidden values). gxsql rejects empty NotIn at
+// configuration time.
 func (c ComparableColumn[T, V]) NotIn(vals ...V) Expectation[T] {
 	return notInSet(fmt.Sprintf("%s not in %v", c.name, vals), c.name, c.get, vals)
 }

@@ -15,8 +15,8 @@
 //	}
 //
 // Validation is collect-all: every expectation runs and the Report holds a
-// Result per expectation. Per-row checks record the complete list of failing
-// row indices in FailedIndices. Table-level RowCount* and Numeric aggregate
+// Result per expectation. Per-row checks record failing row indices in
+// FailedIndices (capped when WithFailedIndicesCap is set). Table-level RowCount*
 // expectations use Total=0 and leave per-row fields empty; see Result and the
 // docs for naming and reporting semantics. Tests use the same suite via the
 // gxtest sub-package.

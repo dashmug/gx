@@ -19,7 +19,7 @@ func (e rowExpectation[T]) Evaluate(rows []T, opts EvalOptions) Result {
 		}
 		res.Success = false
 		res.FailedCount++
-		res.FailedIndices = append(res.FailedIndices, i)
+		res.FailedIndices = appendFailedIndex(res.FailedIndices, opts.FailedIndicesCap, i)
 		if len(res.SampleValues) < opts.SampleCap {
 			res.SampleValues = append(res.SampleValues, row)
 		}

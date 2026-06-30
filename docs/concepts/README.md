@@ -76,3 +76,23 @@ Don't use `gx` when you need to:
 - Validate a single object in a request handler (use a schema validator)
 - Assert conditions in unit tests (use testify or standard library)
 - Validate complex nested document structures (use JSON Schema)
+
+## Operational Limits
+
+`gx` validates data entirely in process. Large datasets and widespread failures
+can consume significant memory when full failure metadata is retained.
+
+| Control | Default | Effect |
+| ------- | ------- | ------ |
+| `WithSampleCap(n)` | 20 | Caps offending values in `SampleValues`; zero collects none |
+| `WithFailedIndicesCap(n)` | 100 | Caps `FailedIndices`; pass zero for unlimited |
+
+For production pipeline gates on large batches, the default caps bound memory.
+Pass `WithFailedIndicesCap(0)` when every failing row index is required for
+remediation.
+
+`Result.String()` and `Report.String()` embed sample values. Redact or avoid
+logging reports when column values may contain PII or secrets.
+
+For database-backed validation at scale, use the sibling [`gxsql`](../../gxsql/docs/)
+library instead.

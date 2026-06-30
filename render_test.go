@@ -11,6 +11,11 @@ func TestResultStringPassAndFail(t *testing.T) {
 		t.Fatalf("pass render = %q", got)
 	}
 
+	tablePass := Result{Name: "row count >= 1: got 42", Success: true, Total: 0}
+	if got := tablePass.String(); got != "✓ row count >= 1: got 42" {
+		t.Fatalf("table-level pass render = %q, want no row suffix", got)
+	}
+
 	fail := Result{
 		Name: "email matches", Success: false, Total: 100,
 		FailedCount: 12, FailedPercent: 12.0,

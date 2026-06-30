@@ -1,8 +1,9 @@
 package gx
 
 // EvalColumn runs a typed predicate over every row, recording failures. It is
-// the shared per-row loop for column-value checks: the only value-boxing is the
-// capped SampleValues; FailedIndices is complete.
+// the shared per-row loop for column-value checks: SampleValues and
+// FailedIndices are capped when the corresponding EvalOptions limits are set;
+// FailedCount stays complete.
 func EvalColumn[T, V any](name, column string, rows []T,
 	get func(T) V, pred func(V) bool, opts EvalOptions) Result {
 
@@ -14,7 +15,7 @@ func EvalColumn[T, V any](name, column string, rows []T,
 		}
 		res.Success = false
 		res.FailedCount++
-		res.FailedIndices = append(res.FailedIndices, i)
+		res.FailedIndices = appendFailedIndex(res.FailedIndices, opts.FailedIndicesCap, i)
 		if len(res.SampleValues) < opts.SampleCap {
 			res.SampleValues = append(res.SampleValues, v)
 		}
@@ -23,6 +24,13 @@ func EvalColumn[T, V any](name, column string, rows []T,
 		res.FailedPercent = float64(res.FailedCount) / float64(res.Total) * 100
 	}
 	return res
+}
+
+func appendFailedIndex(indices []int, cap int, i int) []int {
+	if cap > 0 && len(indices) >= cap {
+		return indices
+	}
+	return append(indices, i)
 }
 
 func evalColumn[T, V any](name, column string, rows []T,

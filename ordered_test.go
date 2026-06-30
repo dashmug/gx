@@ -121,6 +121,21 @@ func TestNotInEmptySetVacuousPass(t *testing.T) {
 	}
 }
 
+func TestInEmptySetFailsAllRows(t *testing.T) {
+	rows := []orow{{Age: 0}, {Age: 99}}
+	rep := NewSuite[orow](
+		Ordered("age", func(r orow) int { return r.Age }).In(),
+	).Validate(rows)
+
+	if rep.OK() {
+		t.Fatal("In() with no allowed values should fail every row")
+	}
+	res := rep.Results[0]
+	if res.FailedCount != 2 || len(res.FailedIndices) != 2 {
+		t.Fatalf("FailedCount=%d FailedIndices=%v, want 2 failures", res.FailedCount, res.FailedIndices)
+	}
+}
+
 func TestZeroOnlyNonZeroRowsFail(t *testing.T) {
 	// ages [0, 5, 0]: Zero() passes 0, fails 5 → FailedIndices=[1]
 	rows := []orow{{Age: 0}, {Age: 5}, {Age: 0}}

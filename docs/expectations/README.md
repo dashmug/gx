@@ -61,7 +61,9 @@ Use for upper bounds.
 
 ### In
 
-Asserts that the value is one of the listed values.
+Asserts that the value is one of the listed values. An empty list fails every
+row (nothing is in the empty set). gxsql rejects empty `In` at configuration
+time.
 
 ```go
 gx.Ordered("status", func(o Order) int { return o.Status }).In(1, 2, 3)
@@ -71,7 +73,9 @@ Use for enumerated numeric values.
 
 ### NotIn
 
-Asserts that the value is not one of the listed values.
+Asserts that the value is not one of the listed values. An empty list passes
+every row vacuously (no forbidden values). gxsql rejects empty `NotIn` at
+configuration time.
 
 ```go
 gx.Ordered("code", func(e Error) int { return e.Code }).NotIn(500, 502, 503)
@@ -193,7 +197,8 @@ structs. Accessed through `gx.Comparable()`.
 
 ### In
 
-Asserts that the value is one of the listed values.
+Asserts that the value is one of the listed values. An empty list fails every
+row. gxsql rejects empty `In` at configuration time.
 
 ```go
 gx.Comparable("status", func(o Order) Status { return o.Status }).In(Active, Pending)
@@ -203,7 +208,8 @@ Use for enum validation.
 
 ### NotIn
 
-Asserts that the value is not one of the listed values.
+Asserts that the value is not one of the listed values. An empty list passes
+every row vacuously. gxsql rejects empty `NotIn` at configuration time.
 
 ```go
 gx.Comparable("status", func(o Order) Status { return o.Status }).NotIn(Cancelled, Expired)

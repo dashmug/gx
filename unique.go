@@ -17,7 +17,7 @@ func (e uniqueExpectation[T, V]) Evaluate(rows []T, opts EvalOptions) Result {
 		if _, dup := seen[v]; dup {
 			res.Success = false
 			res.FailedCount++
-			res.FailedIndices = append(res.FailedIndices, i)
+			res.FailedIndices = appendFailedIndex(res.FailedIndices, opts.FailedIndicesCap, i)
 			if len(res.SampleValues) < opts.SampleCap {
 				res.SampleValues = append(res.SampleValues, v)
 			}

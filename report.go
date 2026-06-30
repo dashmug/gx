@@ -20,7 +20,7 @@ type Result struct {
 	FailedCount   int
 	FailedPercent float64 // FailedCount/Total*100; 0 when Total==0
 	SampleValues  []any   // capped sample of offending values
-	FailedIndices []int   // indices into the validated slice; complete (uncapped)
+	FailedIndices []int   // indices into the validated slice; capped when WithFailedIndicesCap > 0
 	Err           error   // custom-expectation evaluation error; nil for built-ins
 }
 

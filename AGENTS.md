@@ -121,13 +121,23 @@ func (c OrderedColumn[T, V]) Between(lo, hi V) Expectation[T] {
 **SampleCap**
 
 - Default: `DefaultSampleCap = 20`
-- Override: `suite.WithSampleCap(n)`
-- Only `SampleValues` is capped; `FailedIndices` is always the full list
+- Override: `suite.WithSampleCap(n)`; zero means no samples; negative values are
+  rejected when `Validate` runs
+- Only `SampleValues` is capped; `FailedIndices` is capped when
+  `WithFailedIndicesCap` is set (default 100; zero means unlimited)
+
+**FailedIndicesCap**
+
+- Default: `DefaultFailedIndicesCap = 100` (unlimited when set to 0 via
+  `WithFailedIndicesCap`)
+- Override: `suite.WithFailedIndicesCap(n)`; negative values rejected at
+  `Validate`
+- `FailedCount` and `FailedPercent` stay complete when indices are capped
 
 **String rendering** (`render.go`)
 
-- `Result.String()` → `"✓ name (N rows)"` or
-  `"✗ name  M/N failed (P%)  e.g. [vals] @ [indices]"`
+- `Result.String()` → `"✓ name (N rows)"` or `"✓ name"` when `Total == 0`
+- `Result.String()` failure → `"✗ name  M/N failed (P%)  e.g. [vals] @ [indices]"`
 - `Report.String()` → header line + indented result lines
 - `truncList`: `[a b c]` when ≤ cap; `[a b c …]` (space before U+2026) when over
   cap
